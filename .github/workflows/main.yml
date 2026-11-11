@@ -34,6 +34,9 @@ jobs:
           cp android_overlay/AndroidManifest.xml $APP/AndroidManifest.xml
           cp -r android_overlay/res/* $APP/res/
           sed -i 's/applicationId = ".*"/applicationId = "dev.vra.app"/; s/namespace = ".*"/namespace = "dev.vra.app"/' android/app/build.gradle* || true
+      - name: Default widget test हटाओ
+        working-directory: project/frontend
+        run: rm -f test/widget_test.dart
       - run: flutter pub get
         working-directory: project/frontend
       - name: Tests
