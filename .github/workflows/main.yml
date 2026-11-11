@@ -1,0 +1,48 @@
+name: Build VRA APK from ZIP
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: ZIP खोलो
+        run: |
+          ls -la
+          unzip -q -o VRA_Project.zip -d project
+          ls project
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - name: Android scaffold बनाओ
+        working-directory: project/frontend
+        run: flutter create --org dev.vra --project-name vra --platforms android .
+      - name: VRA native layer लगाओ
+        working-directory: project/frontend
+        run: |
+          APP=android/app/src/main
+          rm -rf $APP/kotlin/*
+          mkdir -p $APP/kotlin/dev/vra/app
+          cp android_overlay/MainActivity.kt $APP/kotlin/dev/vra/app/
+          cp -r ../android_host/kotlin/dev/vra/host $APP/kotlin/dev/vra/
+          cp android_overlay/AndroidManifest.xml $APP/AndroidManifest.xml
+          cp -r android_overlay/res/* $APP/res/
+          sed -i 's/applicationId = ".*"/applicationId = "dev.vra.app"/; s/namespace = ".*"/namespace = "dev.vra.app"/' android/app/build.gradle* || true
+      - run: flutter pub get
+        working-directory: project/frontend
+      - name: Tests
+        run: flutter test
+        working-directory: project/frontend
+      - name: Release APK बनाओ
+        run: flutter build apk --release
+        working-directory: project/frontend
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vra-release-apk
+          path: project/frontend/build/app/outputs/flutter-apk/app-release.apk
